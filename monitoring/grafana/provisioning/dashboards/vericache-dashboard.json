@@ -1,0 +1,198 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "VeriCache Hit Precision",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_precision_ratio{engine=\"vericache\"} * 100",
+          "legendFormat": "VeriCache Precision",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 90 },
+              { "color": "green", "value": 98 }
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "title": "Naive Cosine Precision",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_precision_ratio{engine=\"naive_cosine\"} * 100",
+          "legendFormat": "Naive Cosine Precision",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 85 },
+              { "color": "green", "value": 95 }
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "title": "False Hits Prevented (Cross-Encoder)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_false_hits_prevented_total",
+          "legendFormat": "Prevented Poisonings",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "blue", "mode": "fixed" }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "title": "Naive Poisoned Hits (Silent Errors)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_naive_false_hits_total",
+          "legendFormat": "Silent Poisonings",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "id": 5,
+      "title": "Precision Over Time (VeriCache vs. Naive Cosine)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "vericache_precision_ratio * 100",
+          "legendFormat": "{{engine}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 3 },
+          "unit": "percent",
+          "min": 40,
+          "max": 105
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "id": 6,
+      "title": "Evaluation Latency Breakdown (ms)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "vericache_latency_ms",
+          "legendFormat": "{{stage}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 20, "lineWidth": 2 },
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 14 },
+      "id": 7,
+      "title": "Total Queries Received",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_queries_total",
+          "legendFormat": "Queries",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 14 },
+      "id": 8,
+      "title": "Qdrant HNSW Indexed Vectors",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_qdrant_indexed_vectors",
+          "legendFormat": "Vectors in Qdrant",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 14 },
+      "id": 9,
+      "title": "Knowledge Chunk Invalidations",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "vericache_chunk_invalidations_total",
+          "legendFormat": "Invalidations",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["vericache", "ai", "llm"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "VeriCache Observability Dashboard",
+  "uid": "vericache-main"
+}

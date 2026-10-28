@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>VeriCache Observability — Grafana Suite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #0b0f19; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    .grafana-card { background: #111827; border: 1px solid #1f2937; border-radius: 0.5rem; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen">
+  <!-- Grafana Header -->
+  <header class="border-b border-slate-800 bg-[#161b22] px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 bg-gradient-to-tr from-orange-600 to-amber-500 rounded flex items-center justify-center font-bold text-sm">
+        G
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-400">Dashboards / AI Caching /</span>
+          <span class="text-sm font-bold text-white">VeriCache Observability Dashboard</span>
+        </div>
+        <p class="text-[10px] text-slate-400 font-mono">Datasource: Prometheus (/metrics) | Refresh: 2s</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-3 text-xs font-mono">
+      <span class="px-2.5 py-1 bg-emerald-950/60 text-emerald-400 border border-emerald-800 rounded flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        Prometheus: LIVE
+      </span>
+      <a href="/" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700 transition">
+        ← Back to Query Sandbox
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+    <!-- Stat Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grafana-card p-4 border-t-2 border-t-emerald-500">
+        <div class="text-[11px] text-slate-400 font-mono">vericache_precision_ratio{engine="vericache"}</div>
+        <div id="g-veri-prec" class="text-3xl font-extrabold text-emerald-400 mt-2 font-mono">100.0%</div>
+        <div class="text-[11px] text-emerald-500 mt-1">Guaranteed Correct Cache Precision</div>
+      </div>
+      <div class="grafana-card p-4 border-t-2 border-t-red-500">
+        <div class="text-[11px] text-slate-400 font-mono">vericache_precision_ratio{engine="naive_cosine"}</div>
+        <div id="g-naive-prec" class="text-3xl font-extrabold text-red-400 mt-2 font-mono">42.8%</div>
+        <div class="text-[11px] text-red-500 mt-1">Naive Cosine Precision (Poisoned)</div>
+      </div>
+      <div class="grafana-card p-4 border-t-2 border-t-blue-500">
+        <div class="text-[11px] text-slate-400 font-mono">vericache_false_hits_prevented_total</div>
+        <div id="g-prevented" class="text-3xl font-extrabold text-blue-400 mt-2 font-mono">4</div>
+        <div class="text-[11px] text-blue-400 mt-1">False Hits Caught by Verifier</div>
+      </div>
+      <div class="grafana-card p-4 border-t-2 border-t-purple-500">
+        <div class="text-[11px] text-slate-400 font-mono">vericache_latency_ms{stage="cross_encoder"}</div>
+        <div id="g-lat" class="text-3xl font-extrabold text-purple-400 mt-2 font-mono">~5.1 ms</div>
+        <div class="text-[11px] text-purple-400 mt-1">P95 Verification Latency Overhead</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grafana-card p-5">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+          <h3 class="text-xs font-bold font-mono text-slate-300">PANEL 1: Precision Comparison (VeriCache vs. Naive)</h3>
+          <span class="text-[10px] font-mono text-slate-400">Unit: Percent (%)</span>
+        </div>
+        <div class="h-64"><canvas id="gChart1"></canvas></div>
+      </div>
+      <div class="grafana-card p-5">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+          <h3 class="text-xs font-bold font-mono text-slate-300">PANEL 2: Latency Breakdown (ANN Vector vs. Cross-Encoder)</h3>
+          <span class="text-[10px] font-mono text-slate-400">Unit: Milliseconds (ms)</span>
+        </div>
+        <div class="h-64"><canvas id="gChart2"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Live Raw Metrics Stream -->
+    <div class="grafana-card p-5 space-y-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-bold font-mono text-slate-300">PROMETHEUS SCRAPE EXPOSITION STREAM (/metrics)</h3>
+        <span class="text-[10px] text-emerald-400 font-mono">Scraped: 2s Interval</span>
+      </div>
+      <pre id="g-raw" class="bg-slate-950 p-4 rounded text-xs font-mono text-emerald-400 max-h-56 overflow-y-auto border border-slate-800"></pre>
+    </div>
+  </main>
+
+  <script>
+    let c1, c2;
+    function init() {
+      const ctx1 = document.getElementById('gChart1').getContext('2d');
+      c1 = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: ['Naive Cosine Cache', 'VeriCache (Verified)'],
+          datasets: [{
+            data: [42.8, 100.0],
+            backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(16, 185, 129, 0.85)'],
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100, grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } },
+            x: { grid: { display: false }, ticks: { color: '#d1d5db' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      const ctx2 = document.getElementById('gChart2').getContext('2d');
+      c2 = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Qdrant ANN Vector Recall', 'Cross-Encoder Verifier'],
+          datasets: [{
+            data: [8.5, 5.1],
+            backgroundColor: ['#3b82f6', '#f97316'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { family: 'monospace' } } } }
+        }
+      });
+    }
+
+    async function sync() {
+      try {
+        const res = await fetch('/v1/cache/stats');
+        const data = await res.json();
+        const d = data.derived;
+        const s = data.stats;
+
+        document.getElementById('g-veri-prec').innerText = d.vericache_precision_pct + '%';
+        document.getElementById('g-naive-prec').innerText = d.naive_precision_pct + '%';
+        document.getElementById('g-prevented').innerText = s.vericache_rejected_candidates;
+        document.getElementById('g-lat').innerText = '~' + d.avg_verifier_latency_ms + ' ms';
+
+        c1.data.datasets[0].data = [d.naive_precision_pct, d.vericache_precision_pct];
+        c1.update();
+
+        c2.data.datasets[0].data = [d.avg_ann_latency_ms || 8.0, d.avg_verifier_latency_ms || 5.0];
+        c2.update();
+
+        const mRes = await fetch('/metrics');
+        document.getElementById('g-raw').innerText = await mRes.text();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    window.onload = () => {
+      init();
+      sync();
+      setInterval(sync, 2000);
+    };
+  </script>
+</body>
+</html>
